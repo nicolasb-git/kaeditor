@@ -1,0 +1,60 @@
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--statusbar-height);
+  background: var(--accent-primary);
+  padding: 0 var(--sp-3);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.left,
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.item {
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  padding: 0 var(--sp-2);
+  border-radius: 3px;
+  transition: background var(--transition-fast);
+  font-weight: 400;
+}
+
+.dirty {
+  color: #ffe58a;
+  font-weight: 600;
+}
+
+.divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.fontBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  transition: background var(--transition-fast);
+}
+
+.fontBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

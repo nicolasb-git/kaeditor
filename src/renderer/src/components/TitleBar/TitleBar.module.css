@@ -1,0 +1,68 @@
+.titleBar {
+  display: flex;
+  align-items: center;
+  height: var(--titlebar-height);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-default);
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 100;
+}
+
+.drag {
+  flex: 1;
+  height: 100%;
+  -webkit-app-region: drag;
+}
+
+.title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+.windowControls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: var(--sp-2);
+  -webkit-app-region: no-drag;
+}
+
+.windowBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.windowBtn:hover {
+  color: var(--text-primary);
+}
+
+.minimize:hover {
+  background: var(--bg-hover);
+}
+
+.maximize:hover {
+  background: var(--bg-hover);
+}
+
+.close:hover {
+  background: var(--accent-danger);
+  color: #fff;
+}
