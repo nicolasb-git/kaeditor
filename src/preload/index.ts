@@ -9,12 +9,14 @@ contextBridge.exposeInMainWorld('api', {
     save: (filePath: string, content: string) => ipcRenderer.invoke('file:save', filePath, content),
     saveAs: (defaultName: string, content: string) =>
       ipcRenderer.invoke('file:saveAs', defaultName, content),
+    confirmSave: (fileName: string) => ipcRenderer.invoke('file:confirmSave', fileName),
     exists: (filePath: string) => ipcRenderer.invoke('file:exists', filePath)
   },
 
   // Folder operations
   folder: {
-    open: () => ipcRenderer.invoke('folder:open')
+    open: () => ipcRenderer.invoke('folder:open'),
+    read: (folderPath: string) => ipcRenderer.invoke('folder:read', folderPath)
   },
 
   // Window controls

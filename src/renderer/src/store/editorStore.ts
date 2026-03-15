@@ -24,6 +24,7 @@ interface EditorState {
   fontSize: number
   settings: EditorSettings
   openFolderPath: string | null
+  fileTree: FileNode[]
 
   // Actions
   newTab: () => void
@@ -36,7 +37,8 @@ interface EditorState {
   toggleSidebar: () => void
   toggleWordWrap: () => void
   setFontSize: (size: number) => void
-  setOpenFolderPath: (path: string | null) => void
+  setOpenFolderPath: (path: string | null, tree?: FileNode[]) => void
+  refreshFileTree: () => Promise<void>
 }
 
 let tabCounter = 0
@@ -80,6 +82,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     insertSpaces: true
   },
   openFolderPath: null,
+  fileTree: [],
 
   newTab: () => {
     const id = newTabId()
@@ -109,12 +112,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         continue
       }
       const id = newTabId()
+      const normalizedContent = content.replace(/\r\n/g, '\n')
       newTabs.push({
         id,
         filePath,
         title: getTitleFromPath(filePath),
-        content,
-        savedContent: content,
+        content: normalizedContent,
+        savedContent: normalizedContent,
         language: getLanguageFromPath(filePath),
         cursorOffset: 0,
         scrollPosition: { top: 0, left: 0 }
@@ -163,11 +167,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       tabs: s.tabs.map((t) => {
         if (t.id !== id) return t
         const fp = filePath ?? t.filePath
+        const normalizedContent = t.content.replace(/\r\n/g, '\n')
         return {
           ...t,
           filePath: fp,
           title: fp ? getTitleFromPath(fp) : t.title,
-          savedContent: t.content,
+          content: normalizedContent,
+          savedContent: normalizedContent,
           language: fp ? getLanguageFromPath(fp) : t.language
         }
       })
@@ -177,5 +183,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleWordWrap: () => set((s) => ({ wordWrap: !s.wordWrap })),
   setFontSize: (size) => set({ fontSize: size }),
-  setOpenFolderPath: (path) => set({ openFolderPath: path })
+  setOpenFolderPath: (path, tree) => set({ openFolderPath: path, fileTree: tree ?? [] }),
+  refreshFileTree: async () => {
+    const { openFolderPath } = get()
+    if (!openFolderPath) return
+    const result = await window.api.folder.read(openFolderPath)
+    if (result.success && result.tree) {
+      set({ fileTree: result.tree })
+    }
+  }
 }))

@@ -57,7 +57,7 @@ export default function Editor({ onSave }: Props) {
 
   activeTabIdRef.current = activeTabId
 
-  // Listen to menu events for Search and Go to Line
+  // Listen to menu events for Search, Go to Line and Save
   useEffect(() => {
     if (!window.api) return
     const unsubs = [
@@ -66,19 +66,6 @@ export default function Editor({ onSave }: Props) {
     ]
     return () => unsubs.forEach(u => u())
   }, [])
-
-  const customKeymaps = keymap.of([
-    {
-      key: 'Ctrl-s',
-      mac: 'Cmd-s',
-      run: () => { onSave(); return true }
-    },
-    {
-      key: 'Ctrl-g',
-      mac: 'Cmd-g',
-      run: (view) => { gotoLine(view); return true }
-    }
-  ])
 
   // Create the editor once
   useEffect(() => {
@@ -116,24 +103,40 @@ export default function Editor({ onSave }: Props) {
           ...completionKeymap,
           indentWithTab
         ]),
-        customKeymaps,
+        keymap.of([
+          {
+            key: 'Ctrl-g',
+            mac: 'Cmd-g',
+            run: (view) => { gotoLine(view); return true }
+          }
+        ]),
 
         languageCompartment.of(getLanguageExtension(startLanguage)),
         wordWrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
         indentCompartment.of(indentUnit.of(settings.insertSpaces ? " ".repeat(settings.tabSize) : "\t")),
 
         EditorView.updateListener.of((update) => {
-          if (update.docChanged || update.selectionSet) {
-            const id = activeTabIdRef.current
-            if (id && viewRef.current) {
-              const content = update.state.doc.toString()
-              const cursor = update.state.selection.main.head
-              const scroll = {
-                 top: viewRef.current.scrollDOM.scrollTop,
-                 left: viewRef.current.scrollDOM.scrollLeft
-              }
-              updateContent(id, content, cursor, scroll)
-            }
+          const id = activeTabIdRef.current
+          if (!id || !viewRef.current) return
+
+          const content = update.state.doc.toString()
+          const cursor = update.state.selection.main.head
+          const scroll = {
+            top: viewRef.current.scrollDOM.scrollTop,
+            left: viewRef.current.scrollDOM.scrollLeft
+          }
+
+          const currentTab = useEditorStore.getState().tabs.find(t => t.id === id)
+          if (!currentTab) return
+
+          // Only update if something actually changed
+          if (
+            update.docChanged || 
+            currentTab.cursorOffset !== cursor || 
+            currentTab.scrollPosition.top !== scroll.top || 
+            currentTab.scrollPosition.left !== scroll.left
+          ) {
+            updateContent(id, content, cursor, scroll)
           }
         }),
 

@@ -3,9 +3,10 @@ import styles from './WelcomeScreen.module.css'
 interface Props {
   onNewFile: () => void
   onOpenFile: () => void
+  onOpenFolder: () => void
 }
 
-export default function WelcomeScreen({ onNewFile, onOpenFile }: Props) {
+export default function WelcomeScreen({ onNewFile, onOpenFile, onOpenFolder }: Props) {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
@@ -39,6 +40,12 @@ export default function WelcomeScreen({ onNewFile, onOpenFile }: Props) {
               <path d="M2 5C2 4.44772 2.44772 4 3 4H6.58579L8 5.41421H13C13.5523 5.41421 14 5.86193 14 6.41421V12C14 12.5523 13.5523 13 13 13H3C2.44772 13 2 12.5523 2 12V5Z" stroke="currentColor" strokeWidth="1.3" />
             </svg>
             Open File
+          </button>
+          <button id="btn-welcome-folder" className={styles.secondaryBtn} onClick={onOpenFolder}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 3H6L8 5H14V13H2V3Z" stroke="currentColor" strokeWidth="1.3" />
+            </svg>
+            Open Folder
           </button>
         </div>
 

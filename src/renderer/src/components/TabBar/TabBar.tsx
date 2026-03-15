@@ -1,4 +1,3 @@
-import { useRef } from 'react'
 import { useEditorStore } from '../../store/editorStore'
 import styles from './TabBar.module.css'
 
@@ -6,10 +5,11 @@ interface Props {
   onNewTab: () => void
   onOpenFile: () => void
   onSave: () => void
+  onCloseTab: (id: string) => void
 }
 
-export default function TabBar({ onNewTab, onOpenFile, onSave }: Props) {
-  const { tabs, activeTabId, closeTab, setActiveTab } = useEditorStore()
+export default function TabBar({ onNewTab, onOpenFile, onCloseTab }: Props) {
+  const { tabs, activeTabId, setActiveTab } = useEditorStore()
 
   function handleTabClick(id: string) {
     setActiveTab(id)
@@ -17,33 +17,18 @@ export default function TabBar({ onNewTab, onOpenFile, onSave }: Props) {
 
   function handleTabClose(e: React.MouseEvent, id: string) {
     e.stopPropagation()
-    closeTab(id)
+    onCloseTab(id)
   }
 
   function handleTabMiddleClick(e: React.MouseEvent, id: string) {
     if (e.button === 1) {
       e.preventDefault()
-      closeTab(id)
-    }
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      e.preventDefault()
-      onSave()
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-      e.preventDefault()
-      onNewTab()
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
-      e.preventDefault()
-      onOpenFile()
+      onCloseTab(id)
     }
   }
 
   return (
-    <div className={styles.tabBar} onKeyDown={handleKeyDown}>
+    <div className={styles.tabBar}>
       <div className={styles.tabs}>
         {tabs.map((tab) => {
           const isDirty = tab.content !== tab.savedContent

@@ -19,6 +19,13 @@ declare module '*.png' {
 }
 
 declare global {
+  interface FileNode {
+    name: string
+    path: string
+    isDirectory: boolean
+    children?: FileNode[]
+  }
+
   interface Window {
     api: {
       file: {
@@ -26,10 +33,12 @@ declare global {
         read: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>
         save: (filePath: string, content: string) => Promise<{ success: boolean; error?: string }>
         saveAs: (defaultName: string, content: string) => Promise<{ success: boolean; filePath?: string; error?: string } | null>
+        confirmSave: (fileName: string) => Promise<'save' | 'no-save' | 'cancel'>
         exists: (filePath: string) => Promise<boolean>
       }
       folder: {
-        open: () => Promise<string | null>
+        open: () => Promise<{ path: string; tree: FileNode[] } | null>
+        read: (folderPath: string) => Promise<{ success: boolean; tree?: FileNode[]; error?: string }>
       }
       window: {
         minimize: () => void
