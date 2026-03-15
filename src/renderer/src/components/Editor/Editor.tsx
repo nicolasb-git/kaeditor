@@ -1,10 +1,10 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, dropCursor, rectangularSelection, crosshairCursor } from '@codemirror/view'
 import { EditorState as CMEditorState, Compartment } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { searchKeymap, highlightSelectionMatches } from '@codemirror/search'
+import { searchKeymap, highlightSelectionMatches, openSearchPanel, gotoLine } from '@codemirror/search'
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
-import { foldGutter, indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldKeymap } from '@codemirror/language'
+import { foldGutter, indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldKeymap, indentUnit } from '@codemirror/language'
 import { javascript } from '@codemirror/lang-javascript'
 import { python } from '@codemirror/lang-python'
 import { html } from '@codemirror/lang-html'
@@ -22,6 +22,7 @@ import styles from './Editor.module.css'
 
 const languageCompartment = new Compartment()
 const wordWrapCompartment = new Compartment()
+const indentCompartment = new Compartment()
 
 function getLanguageExtension(language: string) {
   switch (language) {
@@ -47,7 +48,7 @@ interface Props {
 }
 
 export default function Editor({ onSave }: Props) {
-  const { tabs, activeTabId, updateContent, wordWrap, fontSize } = useEditorStore()
+  const { tabs, activeTabId, updateContent, wordWrap, fontSize, settings } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -56,11 +57,26 @@ export default function Editor({ onSave }: Props) {
 
   activeTabIdRef.current = activeTabId
 
-  const saveKeymap = keymap.of([
+  // Listen to menu events for Search and Go to Line
+  useEffect(() => {
+    if (!window.api) return
+    const unsubs = [
+      window.api.menu.onFind(() => viewRef.current?.focus() || openSearchPanel(viewRef.current!)),
+      window.api.menu.onGotoLine(() => viewRef.current?.focus() || gotoLine(viewRef.current!))
+    ]
+    return () => unsubs.forEach(u => u())
+  }, [])
+
+  const customKeymaps = keymap.of([
     {
       key: 'Ctrl-s',
       mac: 'Cmd-s',
       run: () => { onSave(); return true }
+    },
+    {
+      key: 'Ctrl-g',
+      mac: 'Cmd-g',
+      run: (view) => { gotoLine(view); return true }
     }
   ])
 
@@ -74,7 +90,6 @@ export default function Editor({ onSave }: Props) {
     const state = CMEditorState.create({
       doc: startContent,
       extensions: [
-        // Base setup
         lineNumbers(),
         highlightActiveLine(),
         highlightActiveLineGutter(),
@@ -89,14 +104,9 @@ export default function Editor({ onSave }: Props) {
         closeBrackets(),
         highlightSelectionMatches(),
         autocompletion(),
-
-        // Syntax highlighting
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-
-        // Theme
         oneDark,
 
-        // Keymaps
         keymap.of([
           ...closeBracketsKeymap,
           ...defaultKeymap,
@@ -106,21 +116,27 @@ export default function Editor({ onSave }: Props) {
           ...completionKeymap,
           indentWithTab
         ]),
-        saveKeymap,
+        customKeymaps,
 
-        // Compartments for dynamic config
         languageCompartment.of(getLanguageExtension(startLanguage)),
         wordWrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
+        indentCompartment.of(indentUnit.of(settings.insertSpaces ? " ".repeat(settings.tabSize) : "\t")),
 
-        // Listen for changes
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
+          if (update.docChanged || update.selectionSet) {
             const id = activeTabIdRef.current
-            if (id) updateContent(id, update.state.doc.toString())
+            if (id && viewRef.current) {
+              const content = update.state.doc.toString()
+              const cursor = update.state.selection.main.head
+              const scroll = {
+                 top: viewRef.current.scrollDOM.scrollTop,
+                 left: viewRef.current.scrollDOM.scrollLeft
+              }
+              updateContent(id, content, cursor, scroll)
+            }
           }
         }),
 
-        // Base theme tweaks
         EditorView.theme({
           '&': {
             height: '100%',
@@ -131,23 +147,41 @@ export default function Editor({ onSave }: Props) {
             overflow: 'auto',
             fontFamily: 'var(--font-mono)'
           },
-          '.cm-content': {
-            caretColor: '#58a6ff',
-            padding: '4px 0'
-          },
+          '.cm-content': { caretColor: '#58a6ff', padding: '4px 0' },
           '.cm-gutters': {
             backgroundColor: '#0d1117',
             borderRight: '1px solid #21262d',
             color: '#6e7681'
           },
-          '.cm-activeLineGutter': {
-            backgroundColor: '#161b22',
-            color: '#e6edf3'
+          '.cm-activeLineGutter': { backgroundColor: '#161b22', color: '#e6edf3' },
+          '.cm-cursor': { borderLeftColor: '#58a6ff', borderLeftWidth: '2px' },
+          // Style for search panel
+          '.cm-search': {
+            backgroundColor: 'var(--bg-secondary)',
+            borderBottom: '1px solid var(--border-default)',
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-ui)',
+            padding: '8px'
           },
-          '.cm-cursor': {
-            borderLeftColor: '#58a6ff',
-            borderLeftWidth: '2px'
-          }
+          '.cm-search input': {
+            backgroundColor: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-default)',
+            color: 'var(--text-primary)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '2px 6px',
+            outline: 'none'
+          },
+          '.cm-search input:focus': { borderColor: 'var(--accent-primary)' },
+          '.cm-search button': {
+            backgroundColor: 'var(--bg-hover)',
+            border: '1px solid var(--border-default)',
+            color: 'var(--text-secondary)',
+            borderRadius: 'var(--radius-sm)',
+            margin: '2px',
+            cursor: 'pointer'
+          },
+          '.cm-search button:hover': { color: 'var(--text-primary)' },
+          '.cm-search label': { fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }
         })
       ]
     })
@@ -159,32 +193,42 @@ export default function Editor({ onSave }: Props) {
       view.destroy()
       viewRef.current = null
     }
-  }, []) // Create once
+  }, [])
 
-  // When the active tab changes, update the editor content + language
+  // When tab switches: Restore cursor & scroll
   useEffect(() => {
     const view = viewRef.current
     if (!view || !activeTab) return
 
     const currentDoc = view.state.doc.toString()
-    if (currentDoc !== activeTab.content) {
-      view.dispatch({
-        changes: { from: 0, to: currentDoc.length, insert: activeTab.content }
-      })
-    }
-
-    // Update language
+    
+    // Batch dispatch for performance and to avoid multiple renderers
     view.dispatch({
-      effects: languageCompartment.reconfigure(getLanguageExtension(activeTab.language))
+      changes: currentDoc !== activeTab.content ? { from: 0, to: currentDoc.length, insert: activeTab.content } : undefined,
+      selection: { anchor: activeTab.cursorOffset },
+      effects: [
+         languageCompartment.reconfigure(getLanguageExtension(activeTab.language))
+      ]
+    })
+
+    // Restore scroll after the layout is calculated
+    requestAnimationFrame(() => {
+      if (viewRef.current) {
+        viewRef.current.scrollDOM.scrollTop = activeTab.scrollPosition.top
+        viewRef.current.scrollDOM.scrollLeft = activeTab.scrollPosition.left
+      }
     })
   }, [activeTabId])
 
-  // Update word wrap
+  // Update dynamic settings
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: wordWrapCompartment.reconfigure(wordWrap ? EditorView.lineWrapping : [])
+      effects: [
+        wordWrapCompartment.reconfigure(wordWrap ? EditorView.lineWrapping : []),
+        indentCompartment.reconfigure(indentUnit.of(settings.insertSpaces ? " ".repeat(settings.tabSize) : "\t"))
+      ]
     })
-  }, [wordWrap])
+  }, [wordWrap, settings])
 
   if (!activeTab) return null
 

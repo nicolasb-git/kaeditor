@@ -7,6 +7,13 @@ export interface Tab {
   content: string
   savedContent: string      // last known saved version
   language: string
+  cursorOffset: number
+  scrollPosition: { top: number; left: number }
+}
+
+interface EditorSettings {
+  tabSize: number
+  insertSpaces: boolean
 }
 
 interface EditorState {
@@ -15,6 +22,7 @@ interface EditorState {
   sidebarOpen: boolean
   wordWrap: boolean
   fontSize: number
+  settings: EditorSettings
   openFolderPath: string | null
 
   // Actions
@@ -22,7 +30,8 @@ interface EditorState {
   openTabs: (files: { filePath: string; content: string }[]) => void
   closeTab: (id: string) => void
   setActiveTab: (id: string) => void
-  updateContent: (id: string, content: string) => void
+  updateContent: (id: string, content: string, cursorOffset?: number, scrollPosition?: { top: number; left: number }) => void
+  updateSettings: (settings: Partial<EditorSettings>) => void
   markSaved: (id: string, filePath?: string) => void
   toggleSidebar: () => void
   toggleWordWrap: () => void
@@ -66,6 +75,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   sidebarOpen: true,
   wordWrap: false,
   fontSize: 14,
+  settings: {
+    tabSize: 2,
+    insertSpaces: true
+  },
   openFolderPath: null,
 
   newTab: () => {
@@ -76,7 +89,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       title: 'Untitled',
       content: '',
       savedContent: '',
-      language: 'text'
+      language: 'text',
+      cursorOffset: 0,
+      scrollPosition: { top: 0, left: 0 }
     }
     set((s) => ({ tabs: [...s.tabs, tab], activeTabId: id }))
   },
@@ -100,7 +115,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         title: getTitleFromPath(filePath),
         content,
         savedContent: content,
-        language: getLanguageFromPath(filePath)
+        language: getLanguageFromPath(filePath),
+        cursorOffset: 0,
+        scrollPosition: { top: 0, left: 0 }
       })
       lastId = id
     }
@@ -126,10 +143,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setActiveTab: (id) => set({ activeTabId: id }),
 
-  updateContent: (id, content) => {
+  updateContent: (id, content, cursorOffset, scrollPosition) => {
     set((s) => ({
-      tabs: s.tabs.map((t) => (t.id === id ? { ...t, content } : t))
+      tabs: s.tabs.map((t) => (t.id === id ? { 
+        ...t, 
+        content, 
+        cursorOffset: cursorOffset ?? t.cursorOffset,
+        scrollPosition: scrollPosition ?? t.scrollPosition
+      } : t))
     }))
+  },
+
+  updateSettings: (newSettings) => {
+    set((s) => ({ settings: { ...s.settings, ...newSettings } }))
   },
 
   markSaved: (id, filePath) => {

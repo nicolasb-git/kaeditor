@@ -7,43 +7,6 @@ import Editor from './components/Editor/Editor'
 import StatusBar from './components/StatusBar/StatusBar'
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
 
-declare global {
-  interface Window {
-    api: {
-      file: {
-        open: () => Promise<{ filePath: string; content: string }[] | null>
-        read: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>
-        save: (filePath: string, content: string) => Promise<{ success: boolean; error?: string }>
-        saveAs: (defaultName: string, content: string) => Promise<{ success: boolean; filePath?: string; error?: string } | null>
-        exists: (filePath: string) => Promise<boolean>
-      }
-      folder: {
-        open: () => Promise<string | null>
-      }
-      window: {
-        minimize: () => void
-        maximize: () => void
-        close: () => void
-        onMaximized: (cb: (isMaximized: boolean) => void) => void
-      }
-      menu: {
-        onFileNew: (cb: () => void) => () => void
-        onFileOpen: (cb: () => void) => () => void
-        onFolderOpen: (cb: () => void) => () => void
-        onFileSave: (cb: () => void) => () => void
-        onFileSaveAs: (cb: () => void) => () => void
-        onTabClose: (cb: () => void) => () => void
-        onFind: (cb: () => void) => () => void
-        onReplace: (cb: () => void) => () => void
-        onGotoLine: (cb: () => void) => () => void
-        onToggleSidebar: (cb: () => void) => () => void
-        onToggleWordWrap: (cb: () => void) => () => void
-        onAbout: (cb: () => void) => () => void
-      }
-    }
-  }
-}
-
 export default function App() {
   const { tabs, activeTabId, newTab, openTabs, closeTab, markSaved, toggleSidebar, toggleWordWrap } = useEditorStore()
 
@@ -80,8 +43,6 @@ export default function App() {
     if (folderPath) useEditorStore.getState().setOpenFolderPath(folderPath)
   }
 
-  // Use getState() inside handlers to ensure we have the LATEST state
-  // This prevents stale closures from causing multiple "Save As" prompts
   async function handleSave() {
     const state = useEditorStore.getState()
     const currentTab = state.tabs.find((t) => t.id === state.activeTabId)
